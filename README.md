@@ -1,6 +1,6 @@
 # Conexión Carga Web
 
-Panel administrativo web de **Conexión Carga**, construido sobre **React 19 + TypeScript + Vite** y adaptado a partir del template **ECME**.
+Panel administrativo web de **Conexión Carga**, construido sobre **React 19 + TypeScript + Vite**.
 
 Este proyecto concentra la operación administrativa del ecosistema Conexión Carga: dashboard, gestión de viajes, historial de eliminaciones, usuarios, perfil, puntos por referidos y utilidades de exportación.
 
@@ -158,7 +158,7 @@ Algunos grupos de endpoints usados por el panel:
 
 ## Convenciones del proyecto
 
-- La UI debe mantenerse consistente con **ECME**
+- La UI debe mantenerse consistente.
 - Los textos visibles se manejan en **español**
 - Se priorizan cambios **incrementales** y fáciles de revertir
 - El backend compartido con móvil **no debe romperse**
