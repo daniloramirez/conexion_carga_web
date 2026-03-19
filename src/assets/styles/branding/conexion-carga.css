@@ -1,0 +1,88 @@
+:root {
+    --cc-naranja-principal: #ff7800;
+    --cc-verde-claro-marca: #a7e27a;
+    --cc-verde-accion-principal: #19b300;
+    --cc-fondo-crema-claro: #f5f5f2;
+    --cc-gris-claro-bordes: #eaeaea;
+    --cc-gris-secundario-texto-iconos: #6b7280;
+    --cc-amarillo-apoyo: #ffd54f;
+    --cc-naranja-deshabilitado: #ffedd9;
+    --cc-verde-deshabilitado: #dbf0d9;
+    --cc-verde-profundo-contraste: #2f4d2a;
+    --cc-warning-suave: #fff8db;
+
+    --success: var(--cc-verde-accion-principal);
+    --success-subtle: var(--cc-verde-deshabilitado);
+    --info: var(--cc-naranja-principal);
+    --info-subtle: var(--cc-naranja-deshabilitado);
+    --warning: var(--cc-amarillo-apoyo);
+    --warning-subtle: var(--cc-warning-suave);
+    --gray-100: var(--cc-fondo-crema-claro);
+    --gray-200: var(--cc-gris-claro-bordes);
+    --gray-300: var(--cc-gris-claro-bordes);
+    --gray-500: var(--cc-gris-secundario-texto-iconos);
+}
+
+@layer components {
+    .button {
+        @apply transition-colors duration-200;
+    }
+
+    .button.bg-primary {
+        box-shadow: 0 8px 16px -10px rgb(25 179 0 / 55%);
+    }
+
+    .button.bg-primary:hover:not(.opacity-50) {
+        color: var(--cc-verde-profundo-contraste);
+    }
+
+    .button:focus-visible {
+        outline: 2px solid var(--cc-naranja-principal);
+        outline-offset: 2px;
+    }
+
+    .button.bg-white.border.border-gray-300 {
+        background-color: var(--cc-fondo-crema-claro);
+        border-color: var(--cc-gris-claro-bordes);
+        color: var(--cc-gris-secundario-texto-iconos);
+    }
+
+    .button.bg-white.border.border-gray-300:hover:not(.opacity-50) {
+        border-color: var(--cc-naranja-principal);
+        color: var(--cc-naranja-principal);
+        box-shadow: 0 0 0 1px var(--cc-naranja-principal);
+    }
+
+    .button.opacity-50.bg-primary {
+        opacity: 1;
+        background-color: var(--cc-verde-deshabilitado);
+        border-color: var(--cc-verde-deshabilitado);
+        color: var(--cc-verde-profundo-contraste);
+    }
+
+    .button.opacity-50.bg-white.border.border-gray-300 {
+        opacity: 1;
+        background-color: var(--cc-naranja-deshabilitado);
+        border-color: var(--cc-naranja-deshabilitado);
+        color: var(--cc-gris-secundario-texto-iconos);
+    }
+
+    .tag {
+        border-color: var(--cc-gris-claro-bordes);
+    }
+
+    .tag-affix {
+        background-color: var(--cc-naranja-principal);
+    }
+
+    .card-border,
+    .card-header-border,
+    .card-footer-border {
+        border-color: var(--cc-gris-claro-bordes);
+    }
+
+    .cc-resaltado-marca {
+        background-color: var(--cc-warning-suave);
+        color: var(--cc-verde-profundo-contraste);
+    }
+}
