@@ -35,7 +35,6 @@ import {
     PiPencilSimpleLineDuotone,
     PiPlusDuotone,
     PiPowerDuotone,
-    PiUsersThreeDuotone,
 } from 'react-icons/pi'
 import type {
     EstadoFiltroUsuarioAdmin,
@@ -737,7 +736,7 @@ const Users = () => {
                     ID: usuario.id,
                     'Nombre completo': usuario.nombre_completo,
                     Correo: usuario.correo,
-                    Teléfono: usuario.telefono || '-',
+                    Identificación: usuario.telefono || '-',
                     Empresa: usuario.empresa || '-',
                     Tipo: usuario.tipo,
                     Estado: usuario.estado,
@@ -766,10 +765,7 @@ const Users = () => {
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                         <div>
-                            <h5 className="inline-flex items-center gap-2">
-                                <PiUsersThreeDuotone className="text-primary text-xl" />
-                                <span>Administración de Usuarios</span>
-                            </h5>
+                            <h5>Administración de Usuarios</h5>
                             <p className="text-sm text-gray-500 mt-1">
                                 Consulta, creación, edición y control de habilitación de
                                 usuarios.
@@ -802,7 +798,7 @@ const Users = () => {
                                     setTextoBusqueda(event.target.value)
                                 }
                                 prefix={<PiMagnifyingGlassDuotone />}
-                                placeholder="Buscar por correo, nombres, apellidos, teléfono o empresa"
+                                placeholder="Buscar por correo, nombres, apellidos, identificación o empresa"
                             />
                         </div>
 
@@ -914,7 +910,7 @@ const Users = () => {
                     <THead>
                         <Tr>
                             <Th>Nombre completo</Th>
-                            <Th>Teléfono</Th>
+                            <Th>Identificación</Th>
                             <Th>Tipo de usuario</Th>
                             <Th>Empresa</Th>
                             <Th>Estado</Th>
@@ -1085,7 +1081,7 @@ const Users = () => {
                                     <p className="mt-1 break-all">{detalleUsuario.email}</p>
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
-                                    <p className="text-gray-500">Teléfono</p>
+                                    <p className="text-gray-500">Identificación</p>
                                     <p className="mt-1">{detalleUsuario.phone || '-'}</p>
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
@@ -1262,7 +1258,7 @@ const Users = () => {
                                     </div>
                                     <div>
                                         <label className="text-sm text-gray-500">
-                                            Teléfono
+                                            Identificación
                                         </label>
                                         <Input
                                             value={formulario.phone}
@@ -1272,7 +1268,7 @@ const Users = () => {
                                                     event.target.value,
                                                 )
                                             }
-                                            placeholder="Teléfono"
+                                            placeholder="Identificación"
                                         />
                                     </div>
                                     <div>

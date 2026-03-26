@@ -647,7 +647,7 @@ const ReferralPoints = () => {
                                                     colSpan={5}
                                                     className="bg-gray-50/60"
                                                 >
-                                                    <div className="px-2 py-4">
+                                                    <div className="px-2 py-1">
                                                         {estaCargandoReferidos ? (
                                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                                                 <PiSpinnerGapDuotone className="animate-spin text-base" />
@@ -665,57 +665,83 @@ const ReferralPoints = () => {
                                                                 referidos activos asociados.
                                                             </div>
                                                         ) : (
-                                                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                                            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                                                                 {referidos.map((referido) => (
                                                                     <div
                                                                         key={referido.id}
-                                                                        className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+                                                                        className="flex flex-col gap-3 px-3 py-3 md:flex-row md:items-center md:justify-between md:gap-4 border-b border-gray-100 last:border-b-0"
                                                                     >
-                                                                        <div className="flex items-start justify-between gap-3">
-                                                                            <div className="flex min-w-0 items-start gap-3">
+                                                                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                                                                            <div className="shrink-0">
                                                                                 <Avatar
                                                                                     shape="circle"
-                                                                                    size={42}
+                                                                                    size={36}
                                                                                     className="bg-primary-subtle text-primary font-semibold shadow-sm"
                                                                                 >
                                                                                     {obtenerInicialesUsuario(
                                                                                         referido,
                                                                                     )}
                                                                                 </Avatar>
-                                                                                <div className="min-w-0">
-                                                                                    <p className="font-semibold text-gray-900 leading-5">
-                                                                                        {obtenerNombreCompleto(
-                                                                                            referido,
-                                                                                        )}
-                                                                                    </p>
-                                                                                    <div className="mt-2 space-y-1 text-sm text-gray-500">
-                                                                                        <p className="inline-flex max-w-full items-center gap-2 break-all">
-                                                                                            <PiEnvelopeSimpleDuotone className="text-base text-primary shrink-0" />
-                                                                                            <span className="break-all">
-                                                                                                {referido.email}
+                                                                            </div>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <p className="truncate text-sm font-semibold text-gray-900 leading-5">
+                                                                                    {obtenerNombreCompleto(
+                                                                                        referido,
+                                                                                    )}
+                                                                                </p>
+                                                                                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                                                                                    <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                                                                        <PiEnvelopeSimpleDuotone className="shrink-0 text-sm text-primary" />
+                                                                                        <span className="truncate">
+                                                                                            {referido.email}
+                                                                                        </span>
+                                                                                    </span>
+
+                                                                                    {referido.phone && (
+                                                                                        <span className="inline-flex items-center gap-1.5">
+                                                                                            <PiPhoneDuotone className="shrink-0 text-sm text-primary" />
+                                                                                            <span>
+                                                                                                {referido.phone}
                                                                                             </span>
-                                                                                        </p>
+                                                                                        </span>
+                                                                                    )}
 
-                                                                                        {referido.company_name && (
-                                                                                            <p className="inline-flex max-w-full items-center gap-2">
-                                                                                                <PiBuildingsDuotone className="text-base text-primary shrink-0" />
-                                                                                                <span className="truncate">
-                                                                                                    {
-                                                                                                        referido.company_name
-                                                                                                    }
-                                                                                                </span>
-                                                                                            </p>
-                                                                                        )}
-
-                                                                                        {referido.phone && (
-                                                                                            <p className="inline-flex max-w-full items-center gap-2">
-                                                                                                <PiPhoneDuotone className="text-base text-primary shrink-0" />
-                                                                                                <span>{referido.phone}</span>
-                                                                                            </p>
-                                                                                        )}
-                                                                                    </div>
+                                                                                    {referido.company_name && (
+                                                                                        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                                                                            <PiBuildingsDuotone className="shrink-0 text-sm text-primary" />
+                                                                                            <span className="truncate">
+                                                                                                {
+                                                                                                    referido.company_name
+                                                                                                }
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
+                                                                        </div>
+
+                                                                        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                                                                            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
+                                                                                Registrado el{' '}
+                                                                                {formatearFecha(
+                                                                                    referido.created_at,
+                                                                                )}
+                                                                            </span>
+
+                                                                            <Tag
+                                                                                className={
+                                                                                    referido.active
+                                                                                        ? estadoBadge.habilitado
+                                                                                        : estadoBadge.inhabilitado
+                                                                                }
+                                                                                prefix={
+                                                                                    false
+                                                                                }
+                                                                            >
+                                                                                {referido.active
+                                                                                    ? 'Activo'
+                                                                                    : 'Inactivo'}
+                                                                            </Tag>
 
                                                                             <Button
                                                                                 size="xs"
@@ -736,30 +762,6 @@ const ReferralPoints = () => {
                                                                             >
                                                                                 Quitar
                                                                             </Button>
-                                                                        </div>
-
-                                                                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-dashed border-gray-200 pt-3">
-                                                                            <Tag
-                                                                                className={
-                                                                                    referido.active
-                                                                                        ? estadoBadge.habilitado
-                                                                                        : estadoBadge.inhabilitado
-                                                                                }
-                                                                                prefix={
-                                                                                    false
-                                                                                }
-                                                                            >
-                                                                                {referido.active
-                                                                                    ? 'Activo'
-                                                                                    : 'Inactivo'}
-                                                                            </Tag>
-
-                                                                            <span className="text-xs text-gray-500">
-                                                                                Registrado el{' '}
-                                                                                {formatearFecha(
-                                                                                    referido.created_at,
-                                                                                )}
-                                                                            </span>
                                                                         </div>
                                                                     </div>
                                                                 ))}

@@ -3,7 +3,7 @@ import Container from '@/components/shared/Container'
 import Footer from '@/components/template/Footer'
 import useLayout from '@/utils/hooks/useLayout'
 import classNames from '@/utils/classNames'
-import { FcFullTrash, FcHome, FcShipped } from 'react-icons/fc'
+import { FcConferenceCall, FcFullTrash, FcHome, FcShipped } from 'react-icons/fc'
 import {
     PAGE_CONTAINER_GUTTER_X,
     PAGE_CONTAINER_GUTTER_Y,
@@ -65,6 +65,10 @@ export const PageContainerHeader = ({
         typeof title === 'string' &&
         title.trim().toLocaleLowerCase('es-CO') ===
             'historial de viajes eliminados'
+    const esTituloUsuarios =
+        typeof title === 'string' &&
+        title.trim().toLocaleLowerCase('es-CO') ===
+            'administración de usuarios'
 
     return (
         <div
@@ -88,6 +92,8 @@ export const PageContainerHeader = ({
                                     'inline-flex items-center gap-2',
                                 esTituloHistorialEliminados &&
                                     'inline-flex items-center gap-2',
+                                esTituloUsuarios &&
+                                    'inline-flex items-center gap-2',
                             )}
                         >
                             {esTituloInicio && (
@@ -103,6 +109,11 @@ export const PageContainerHeader = ({
                             {esTituloHistorialEliminados && (
                                 <span className="text-[1.35rem] leading-none">
                                     <FcFullTrash />
+                                </span>
+                            )}
+                            {esTituloUsuarios && (
+                                <span className="text-[1.35rem] leading-none">
+                                    <FcConferenceCall />
                                 </span>
                             )}
                             <span>{title}</span>
