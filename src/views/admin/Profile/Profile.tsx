@@ -11,6 +11,7 @@ import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Notification from '@/components/ui/Notification'
+import Select from '@/components/ui/Select'
 import Tag from '@/components/ui/Tag'
 import toast from '@/components/ui/toast'
 import { useSessionUser } from '@/store/authStore'
@@ -23,12 +24,18 @@ import {
     subirMiFotoPerfil,
 } from '@/services/ProfileService'
 import {
+    type CountryCodeCatalogItem,
+    obtenerCodigosPaisCatalogo,
+} from '@/services/CatalogosService'
+import {
     construirUsuarioSesionDesdePerfil,
     resolverUrlFotoPerfil,
 } from '@/utils/perfilSesion'
+import { countryList } from '@/constants/countries.constant'
 import { FcBusinessman } from 'react-icons/fc'
 import {
     PiPencilSimpleLineDuotone,
+    PiPhoneDuotone,
     PiTrashDuotone,
     PiUserDuotone,
 } from 'react-icons/pi'
@@ -37,9 +44,20 @@ import type { PerfilActual } from '@/@types/profile'
 type FormularioPerfil = {
     first_name: string
     last_name: string
-    phone: string
+    document: string
+    phone_code: string
+    phone_number: string
     company_name: string
     email: string
+}
+
+type OpcionCodigoPais = {
+    value: string
+    label: string
+    name: string
+    iso2: string
+    phone_code: string
+    flag_emoji: string
 }
 
 type FormularioPassword = {
@@ -52,6 +70,116 @@ const formularioPasswordVacio: FormularioPassword = {
     password_actual: '',
     nueva_password: '',
     confirmar_nueva_password: '',
+}
+
+const iso2AEmojiBandera = (iso2?: string) => {
+    const codigo = String(iso2 || '')
+        .trim()
+        .toUpperCase()
+
+    if (!/^[A-Z]{2}$/.test(codigo)) {
+        return '🌐'
+    }
+
+    return String.fromCodePoint(
+        ...codigo.split('').map((char) => 127397 + char.charCodeAt(0)),
+    )
+}
+
+const construirOpcionesPaisFallback = (): OpcionCodigoPais[] => {
+    const unicos = new Map<string, OpcionCodigoPais>()
+
+    countryList.forEach((pais) => {
+        const codigo = String(pais.dialCode || '').trim()
+        const iso2 = String(pais.value || '').trim().toUpperCase()
+        const nombre = String(pais.label || '').trim()
+
+        if (!codigo || !iso2 || !nombre) {
+            return
+        }
+
+        const llave = `${iso2}-${codigo}`
+        if (!unicos.has(llave)) {
+            unicos.set(llave, {
+                value: codigo,
+                label: `${iso2AEmojiBandera(iso2)} ${codigo} · ${nombre}`,
+                name: nombre,
+                iso2,
+                phone_code: codigo,
+                flag_emoji: iso2AEmojiBandera(iso2),
+            })
+        }
+    })
+
+    return Array.from(unicos.values()).sort((a, b) => {
+        if (a.iso2 === 'CO') return -1
+        if (b.iso2 === 'CO') return 1
+        return a.name.localeCompare(b.name, 'es')
+    })
+}
+
+const opcionesPaisFallback = construirOpcionesPaisFallback()
+const opcionPaisColombia =
+    opcionesPaisFallback.find((item) => item.iso2 === 'CO') || opcionesPaisFallback[0]
+
+const normalizarDigitosWhatsapp = (valor: string) => valor.replace(/\D+/g, '')
+const esTelefonoInternacional = (valor?: string | null) =>
+    /^\+\d{7,18}$/.test(String(valor || '').trim())
+
+const descomponerTelefonoInternacional = (
+    telefono?: string | null,
+    opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
+) => {
+    const telefonoNormalizado = String(telefono || '').trim()
+
+    if (!esTelefonoInternacional(telefonoNormalizado)) {
+        return {
+            phone_code: opcionPaisColombia?.phone_code || '+57',
+            phone_number: normalizarDigitosWhatsapp(telefonoNormalizado),
+        }
+    }
+
+    const opcionesOrdenadas = [...opcionesPais].sort(
+        (a, b) => b.phone_code.length - a.phone_code.length,
+    )
+    const opcion = opcionesOrdenadas.find((item) =>
+        telefonoNormalizado.startsWith(item.phone_code),
+    )
+
+    if (!opcion) {
+        return {
+            phone_code: opcionPaisColombia?.phone_code || '+57',
+            phone_number: normalizarDigitosWhatsapp(telefonoNormalizado),
+        }
+    }
+
+    return {
+        phone_code: opcion.phone_code,
+        phone_number: normalizarDigitosWhatsapp(
+            telefonoNormalizado.slice(opcion.phone_code.length),
+        ),
+    }
+}
+
+const construirOpcionesPaisDesdeCatalogo = (
+    items: CountryCodeCatalogItem[],
+): OpcionCodigoPais[] => {
+    const opciones = items
+        .map((item) => ({
+            value: item.phone_code,
+            label: `${item.flag_emoji || iso2AEmojiBandera(item.iso2)} ${item.phone_code} · ${item.name}`,
+            name: item.name,
+            iso2: item.iso2,
+            phone_code: item.phone_code,
+            flag_emoji: item.flag_emoji || iso2AEmojiBandera(item.iso2),
+        }))
+        .sort((a, b) => {
+            if (a.iso2 === 'CO') return -1
+            if (b.iso2 === 'CO') return 1
+            return a.name.localeCompare(b.name, 'es')
+        })
+
+    return opciones.length > 0 ? opciones : opcionesPaisFallback
 }
 
 const extraerMensajeError = (
@@ -78,13 +206,22 @@ const extraerMensajeError = (
     return mensajeBase
 }
 
-const construirFormularioPerfil = (perfil: PerfilActual): FormularioPerfil => ({
-    first_name: perfil.first_name || '',
-    last_name: perfil.last_name || '',
-    phone: perfil.phone || '',
-    company_name: perfil.company_name || '',
-    email: perfil.email || '',
-})
+const construirFormularioPerfil = (
+    perfil: PerfilActual,
+    opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
+): FormularioPerfil => {
+    const telefono = descomponerTelefonoInternacional(perfil.phone, opcionesPais)
+
+    return {
+        first_name: perfil.first_name || '',
+        last_name: perfil.last_name || '',
+        document: perfil.document || '',
+        phone_code: telefono.phone_code,
+        phone_number: telefono.phone_number,
+        company_name: perfil.company_name || '',
+        email: perfil.email || '',
+    }
+}
 
 const formatearFecha = (fechaISO?: string | null) => {
     if (!fechaISO) {
@@ -124,10 +261,14 @@ const Profile = () => {
     const [formularioPerfil, setFormularioPerfil] = useState<FormularioPerfil>({
         first_name: '',
         last_name: '',
-        phone: '',
+        document: '',
+        phone_code: opcionPaisColombia?.phone_code || '+57',
+        phone_number: '',
         company_name: '',
         email: '',
     })
+    const [opcionesPais, setOpcionesPais] =
+        useState<OpcionCodigoPais[]>(opcionesPaisFallback)
     const [formularioPassword, setFormularioPassword] =
         useState<FormularioPassword>(formularioPasswordVacio)
 
@@ -155,9 +296,14 @@ const Profile = () => {
         )
     }
 
-    const sincronizarPerfil = (perfilActualizado: PerfilActual) => {
+    const sincronizarPerfil = (
+        perfilActualizado: PerfilActual,
+        opcionesActuales: OpcionCodigoPais[] = opcionesPais,
+    ) => {
         setPerfil(perfilActualizado)
-        setFormularioPerfil(construirFormularioPerfil(perfilActualizado))
+        setFormularioPerfil(
+            construirFormularioPerfil(perfilActualizado, opcionesActuales),
+        )
         setUser(construirUsuarioSesionDesdePerfil(perfilActualizado))
     }
 
@@ -195,6 +341,46 @@ const Profile = () => {
         }
 
         cargarPerfil()
+
+        return () => {
+            activo = false
+        }
+    }, [])
+
+    useEffect(() => {
+        let activo = true
+
+        const cargarCodigosPais = async () => {
+            try {
+                const response = await obtenerCodigosPaisCatalogo()
+                if (!activo) {
+                    return
+                }
+
+                const opciones = construirOpcionesPaisDesdeCatalogo(response)
+                setOpcionesPais(opciones)
+                setFormularioPerfil((prev) => {
+                    const telefono = descomponerTelefonoInternacional(
+                        `${prev.phone_code || ''}${prev.phone_number || ''}`.trim(),
+                        opciones,
+                    )
+
+                    return {
+                        ...prev,
+                        phone_code: telefono.phone_code,
+                        phone_number: telefono.phone_number || prev.phone_number,
+                    }
+                })
+            } catch {
+                if (!activo) {
+                    return
+                }
+
+                setOpcionesPais(opcionesPaisFallback)
+            }
+        }
+
+        cargarCodigosPais()
 
         return () => {
             activo = false
@@ -246,6 +432,10 @@ const Profile = () => {
 
         const nombres = formularioPerfil.first_name.trim()
         const apellidos = formularioPerfil.last_name.trim()
+        const document = formularioPerfil.document.trim()
+        const phoneNumber = normalizarDigitosWhatsapp(
+            formularioPerfil.phone_number,
+        )
 
         if (!nombres || !apellidos) {
             setErrorPerfil('Los nombres y apellidos son obligatorios.')
@@ -259,7 +449,11 @@ const Profile = () => {
             const response = await actualizarMiPerfil({
                 first_name: nombres,
                 last_name: apellidos,
-                phone: formularioPerfil.phone.trim() || null,
+                document: document || null,
+                phone_code: phoneNumber
+                    ? formularioPerfil.phone_code || opcionPaisColombia?.phone_code || '+57'
+                    : null,
+                phone_number: phoneNumber || null,
                 company_name: perfil.is_company
                     ? formularioPerfil.company_name.trim() || null
                     : null,
@@ -550,18 +744,78 @@ const Profile = () => {
                                         </div>
                                         <div>
                                             <label className="mb-2 block text-sm font-medium text-gray-700">
-                                                Teléfono
+                                                Identificación
                                             </label>
                                             <Input
-                                                value={formularioPerfil.phone}
+                                                value={formularioPerfil.document}
                                                 onChange={(event) =>
                                                     manejarCambioPerfil(
-                                                        'phone',
+                                                        'document',
                                                         event.target.value,
                                                     )
                                                 }
-                                                placeholder="Ingresa tu teléfono"
+                                                placeholder="Ingresa tu identificación"
                                             />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                                Número WhatsApp
+                                            </label>
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div className="md:col-span-5">
+                                                    <Select<OpcionCodigoPais, false>
+                                                        value={
+                                                            opcionesPais.find(
+                                                                (item) =>
+                                                                    item.phone_code ===
+                                                                    formularioPerfil.phone_code,
+                                                            ) || opcionPaisColombia
+                                                        }
+                                                        options={opcionesPais}
+                                                        isSearchable
+                                                        menuPlacement="auto"
+                                                        menuPosition="fixed"
+                                                        menuPortalTarget={
+                                                            typeof window !== 'undefined'
+                                                                ? document.body
+                                                                : undefined
+                                                        }
+                                                        styles={{
+                                                            menuPortal: (base) => ({
+                                                                ...base,
+                                                                zIndex: 70,
+                                                            }),
+                                                        }}
+                                                        placeholder="País"
+                                                        noOptionsMessage={() =>
+                                                            'No hay países disponibles'
+                                                        }
+                                                        onChange={(option) =>
+                                                            manejarCambioPerfil(
+                                                                'phone_code',
+                                                                option?.phone_code ||
+                                                                    opcionPaisColombia?.phone_code ||
+                                                                    '+57',
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-7">
+                                                    <Input
+                                                        prefix={<PiPhoneDuotone />}
+                                                        value={formularioPerfil.phone_number}
+                                                        onChange={(event) =>
+                                                            manejarCambioPerfil(
+                                                                'phone_number',
+                                                                normalizarDigitosWhatsapp(
+                                                                    event.target.value,
+                                                                ),
+                                                            )
+                                                        }
+                                                        placeholder="Número de WhatsApp"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                         {perfil?.is_company && (
                                             <div className="md:col-span-2">
