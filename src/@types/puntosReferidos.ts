@@ -3,6 +3,7 @@ export type UsuarioPuntosReferidos = {
     email: string
     first_name: string
     last_name: string
+    document?: string | null
     phone?: string | null
     company_name?: string | null
     active: boolean
@@ -39,6 +40,7 @@ export type UsuarioReferido = {
     email: string
     first_name: string
     last_name: string
+    document?: string | null
     phone?: string | null
     company_name?: string | null
     active: boolean

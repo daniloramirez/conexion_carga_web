@@ -11,6 +11,7 @@ export type UsuarioAdmin = {
     email: string
     first_name: string
     last_name: string
+    document?: string | null
     phone?: string | null
     is_company: boolean
     company_name?: string | null
@@ -46,7 +47,10 @@ export type CrearUsuarioAdminPayload = {
     first_name: string
     last_name: string
     email: string
+    document?: string
     phone?: string
+    phone_code?: string
+    phone_number?: string
     password: string
     confirm_password?: string
     is_company?: boolean
@@ -61,7 +65,10 @@ export type ActualizarUsuarioAdminPayload = {
     first_name?: string
     last_name?: string
     email?: string
+    document?: string
     phone?: string
+    phone_code?: string
+    phone_number?: string
     password?: string
     confirm_password?: string
     is_company?: boolean
@@ -86,7 +93,8 @@ export type UsuarioAdminExportacion = {
     id: string
     nombre_completo: string
     correo: string
-    telefono?: string | null
+    documento?: string | null
+    numero_whatsapp?: string | null
     empresa?: string | null
     tipo: string
     estado: string

@@ -26,6 +26,10 @@ import {
     obtenerDetalleUsuarioAdministracion,
     obtenerUsuariosAdministracion,
 } from '@/services/UsuariosAdminService'
+import {
+    type CountryCodeCatalogItem,
+    obtenerCodigosPaisCatalogo,
+} from '@/services/CatalogosService'
 import { exportarExcel } from '@/utils/exportarExcel'
 import {
     PiBroomDuotone,
@@ -41,12 +45,15 @@ import type {
     TipoFiltroUsuarioAdmin,
     UsuarioAdmin,
 } from '@/@types/usuariosAdmin'
+import { countryList } from '@/constants/countries.constant'
 
 type FormularioUsuario = {
     first_name: string
     last_name: string
     email: string
-    phone: string
+    document: string
+    phone_code: string
+    phone_number: string
     password: string
     confirm_password: string
     is_company: boolean
@@ -65,6 +72,141 @@ type OpcionSelectString = {
 type OpcionSelectNumero = {
     value: number
     label: string
+}
+
+type OpcionCodigoPais = {
+    value: string
+    label: string
+    name: string
+    iso2: string
+    phone_code: string
+    flag_emoji: string
+}
+
+const iso2AEmojiBandera = (iso2?: string) => {
+    const codigo = String(iso2 || '')
+        .trim()
+        .toUpperCase()
+
+    if (!/^[A-Z]{2}$/.test(codigo)) {
+        return '🌐'
+    }
+
+    return String.fromCodePoint(
+        ...codigo.split('').map((char) => 127397 + char.charCodeAt(0)),
+    )
+}
+
+const construirOpcionesPaisFallback = (): OpcionCodigoPais[] => {
+    const unicos = new Map<string, OpcionCodigoPais>()
+
+    countryList.forEach((pais, index) => {
+        const codigo = String(pais.dialCode || '').trim()
+        const iso2 = String(pais.value || '').trim().toUpperCase()
+        const nombre = String(pais.label || '').trim()
+
+        if (!codigo || !iso2 || !nombre) {
+            return
+        }
+
+        const llave = `${iso2}-${codigo}`
+        if (!unicos.has(llave)) {
+            unicos.set(llave, {
+                value: codigo,
+                label: `${iso2AEmojiBandera(iso2)} ${codigo} · ${nombre}`,
+                name: nombre,
+                iso2,
+                phone_code: codigo,
+                flag_emoji: iso2AEmojiBandera(iso2),
+            })
+        }
+    })
+
+    const opciones = Array.from(unicos.values()).sort((a, b) => {
+        if (a.iso2 === 'CO') return -1
+        if (b.iso2 === 'CO') return 1
+        return a.name.localeCompare(b.name, 'es')
+    })
+
+    return opciones
+}
+
+const opcionesPaisFallback = construirOpcionesPaisFallback()
+const opcionPaisColombia =
+    opcionesPaisFallback.find((item) => item.iso2 === 'CO') || opcionesPaisFallback[0]
+
+const normalizarDigitosWhatsapp = (valor: string) => valor.replace(/\D+/g, '')
+const esTelefonoInternacional = (valor?: string | null) => /^\+\d{7,18}$/.test(String(valor || '').trim())
+
+const obtenerDocumentoUsuario = (usuario: Pick<UsuarioAdmin, 'document' | 'phone'>) => {
+    const document = String(usuario.document || '').trim()
+    if (document) {
+        return document
+    }
+
+    const phone = String(usuario.phone || '').trim()
+    return phone && !esTelefonoInternacional(phone) ? phone : ''
+}
+
+const obtenerWhatsappUsuario = (usuario: Pick<UsuarioAdmin, 'phone'>) => {
+    const phone = String(usuario.phone || '').trim()
+    return esTelefonoInternacional(phone) ? phone : ''
+}
+
+const descomponerTelefonoInternacional = (
+    telefono?: string | null,
+    opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
+) => {
+    const telefonoNormalizado = String(telefono || '').trim()
+
+    if (!esTelefonoInternacional(telefonoNormalizado)) {
+        return {
+            phone_code: opcionPaisColombia?.phone_code || '+57',
+            phone_number: normalizarDigitosWhatsapp(telefonoNormalizado),
+        }
+    }
+
+    const opcionesOrdenadas = [...opcionesPais].sort(
+        (a, b) => b.phone_code.length - a.phone_code.length,
+    )
+    const opcion = opcionesOrdenadas.find((item) =>
+        telefonoNormalizado.startsWith(item.phone_code),
+    )
+
+    if (!opcion) {
+        return {
+            phone_code: opcionPaisColombia?.phone_code || '+57',
+            phone_number: normalizarDigitosWhatsapp(telefonoNormalizado),
+        }
+    }
+
+    return {
+        phone_code: opcion.phone_code,
+        phone_number: normalizarDigitosWhatsapp(
+            telefonoNormalizado.slice(opcion.phone_code.length),
+        ),
+    }
+}
+
+const construirOpcionesPaisDesdeCatalogo = (
+    items: CountryCodeCatalogItem[],
+): OpcionCodigoPais[] => {
+    const opciones = items
+        .map((item) => ({
+            value: item.phone_code,
+            label: `${item.flag_emoji || iso2AEmojiBandera(item.iso2)} ${item.phone_code} · ${item.name}`,
+            name: item.name,
+            iso2: item.iso2,
+            phone_code: item.phone_code,
+            flag_emoji: item.flag_emoji || iso2AEmojiBandera(item.iso2),
+        }))
+        .sort((a, b) => {
+            if (a.iso2 === 'CO') return -1
+            if (b.iso2 === 'CO') return 1
+            return a.name.localeCompare(b.name, 'es')
+        })
+
+    return opciones.length > 0 ? opciones : opcionesPaisFallback
 }
 
 const { THead, TBody, Tr, Th, Td } = Table
@@ -93,7 +235,9 @@ const formularioVacio: FormularioUsuario = {
     first_name: '',
     last_name: '',
     email: '',
-    phone: '',
+    document: '',
+    phone_code: '+57',
+    phone_number: '',
     password: '',
     confirm_password: '',
     is_company: false,
@@ -204,11 +348,22 @@ const obtenerTagsTipo = (usuario: UsuarioAdmin) => {
     return tags
 }
 
-const construirFormulario = (usuario: UsuarioAdmin): FormularioUsuario => ({
-    first_name: usuario.first_name || '',
-    last_name: usuario.last_name || '',
-    email: usuario.email || '',
-    phone: usuario.phone || '',
+const construirFormulario = (
+    usuario: UsuarioAdmin,
+    opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
+): FormularioUsuario => {
+    const telefono = descomponerTelefonoInternacional(
+        obtenerWhatsappUsuario(usuario),
+        opcionesPais,
+    )
+
+    return {
+        first_name: usuario.first_name || '',
+        last_name: usuario.last_name || '',
+        email: usuario.email || '',
+        document: obtenerDocumentoUsuario(usuario),
+        phone_code: telefono.phone_code,
+        phone_number: telefono.phone_number,
     password: '',
     confirm_password: '',
     is_company: Boolean(usuario.is_company),
@@ -216,8 +371,9 @@ const construirFormulario = (usuario: UsuarioAdmin): FormularioUsuario => ({
     is_premium: Boolean(usuario.is_premium),
     is_driver: Boolean(usuario.is_driver),
     is_admin: Boolean(usuario.is_admin),
-    active: Boolean(usuario.active),
-})
+        active: Boolean(usuario.active),
+    }
+}
 
 const Users = () => {
     const [textoBusqueda, setTextoBusqueda] = useState('')
@@ -232,6 +388,7 @@ const Users = () => {
     const [tokenRecarga, setTokenRecarga] = useState(0)
 
     const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
+    const [opcionesPais, setOpcionesPais] = useState<OpcionCodigoPais[]>(opcionesPaisFallback)
     const [totalUsuarios, setTotalUsuarios] = useState(0)
     const [cargandoUsuarios, setCargandoUsuarios] = useState(true)
     const [errorUsuarios, setErrorUsuarios] = useState('')
@@ -258,6 +415,37 @@ const Users = () => {
     const [exportandoExcel, setExportandoExcel] = useState(false)
 
     const controladorListadoRef = useRef<AbortController | null>(null)
+
+    useEffect(() => {
+        const controller = new AbortController()
+
+        const cargarCodigosPais = async () => {
+            try {
+                const data = await obtenerCodigosPaisCatalogo(controller.signal)
+                const opciones = construirOpcionesPaisDesdeCatalogo(data || [])
+                setOpcionesPais(opciones)
+                setFormulario((prev) => {
+                    const phoneCodeExiste = opciones.some(
+                        (item) => item.phone_code === prev.phone_code,
+                    )
+                    if (phoneCodeExiste) {
+                        return prev
+                    }
+
+                    return {
+                        ...prev,
+                        phone_code: opciones.find((item) => item.iso2 === 'CO')?.phone_code || '+57',
+                    }
+                })
+            } catch {
+                setOpcionesPais(opcionesPaisFallback)
+            }
+        }
+
+        cargarCodigosPais()
+
+        return () => controller.abort()
+    }, [])
 
     const aplicarBusquedaDebounce = useMemo(
         () =>
@@ -461,7 +649,10 @@ const Users = () => {
 
     const abrirModalCrear = () => {
         setModoFormulario('crear')
-        setFormulario(formularioVacio)
+        setFormulario({
+            ...formularioVacio,
+            phone_code: opcionesPais.find((item) => item.iso2 === 'CO')?.phone_code || '+57',
+        })
         setErroresFormulario([])
         setUsuarioSeleccionado(null)
         setModalFormularioAbierto(true)
@@ -476,7 +667,7 @@ const Users = () => {
 
         try {
             const data = await obtenerDetalleUsuarioAdministracion(usuario.id)
-            setFormulario(construirFormulario(data))
+            setFormulario(construirFormulario(data, opcionesPais))
         } catch (error) {
             const mensaje = extraerMensajeError(
                 error,
@@ -496,7 +687,10 @@ const Users = () => {
 
     const cerrarModalFormulario = () => {
         setModalFormularioAbierto(false)
-        setFormulario(formularioVacio)
+        setFormulario({
+            ...formularioVacio,
+            phone_code: opcionesPais.find((item) => item.iso2 === 'CO')?.phone_code || '+57',
+        })
         setErroresFormulario([])
         setGuardandoFormulario(false)
         setCargandoFormulario(false)
@@ -586,6 +780,17 @@ const Users = () => {
         const password = formulario.password.trim()
         const confirmPassword = formulario.confirm_password.trim()
 
+        if (!formulario.document.trim()) {
+            errores.push('La identificación es obligatoria.')
+        }
+
+        const phoneDigits = normalizarDigitosWhatsapp(formulario.phone_number)
+        if (!formulario.phone_code.trim() || !phoneDigits) {
+            errores.push('El número WhatsApp es obligatorio.')
+        } else if (!/^\d{6,15}$/.test(phoneDigits)) {
+            errores.push('El número WhatsApp debe contener solo números válidos.')
+        }
+
         if (modoFormulario === 'crear') {
             if (!password) {
                 errores.push('La contraseña es obligatoria al crear el usuario.')
@@ -618,7 +823,9 @@ const Users = () => {
             first_name: formulario.first_name.trim(),
             last_name: formulario.last_name.trim(),
             email: formulario.email.trim(),
-            phone: formulario.phone.trim(),
+            document: formulario.document.trim(),
+            phone_code: formulario.phone_code.trim(),
+            phone_number: normalizarDigitosWhatsapp(formulario.phone_number),
             is_company: Boolean(formulario.is_company),
             company_name: formulario.is_company
                 ? formulario.company_name.trim()
@@ -736,7 +943,8 @@ const Users = () => {
                     ID: usuario.id,
                     'Nombre completo': usuario.nombre_completo,
                     Correo: usuario.correo,
-                    Identificación: usuario.telefono || '-',
+                    Identificación: usuario.documento || '-',
+                    'Número WhatsApp': usuario.numero_whatsapp || '-',
                     Empresa: usuario.empresa || '-',
                     Tipo: usuario.tipo,
                     Estado: usuario.estado,
@@ -798,7 +1006,7 @@ const Users = () => {
                                     setTextoBusqueda(event.target.value)
                                 }
                                 prefix={<PiMagnifyingGlassDuotone />}
-                                placeholder="Buscar por correo, nombres, apellidos, identificación o empresa"
+                                placeholder="Buscar por correo, nombres, apellidos, identificación, WhatsApp o empresa"
                             />
                         </div>
 
@@ -911,6 +1119,7 @@ const Users = () => {
                         <Tr>
                             <Th>Nombre completo</Th>
                             <Th>Identificación</Th>
+                            <Th>Número WhatsApp</Th>
                             <Th>Tipo de usuario</Th>
                             <Th>Empresa</Th>
                             <Th>Estado</Th>
@@ -921,7 +1130,7 @@ const Users = () => {
                     <TBody>
                         {cargandoUsuarios ? (
                             <Tr>
-                                <Td colSpan={7}>
+                                <Td colSpan={8}>
                                     <div className="py-6 text-center text-gray-500">
                                         Cargando usuarios...
                                     </div>
@@ -929,7 +1138,7 @@ const Users = () => {
                             </Tr>
                         ) : usuarios.length === 0 ? (
                             <Tr>
-                                <Td colSpan={7}>
+                                <Td colSpan={8}>
                                     <div className="py-6 text-center text-gray-500">
                                         No se encontraron usuarios con los filtros actuales.
                                     </div>
@@ -957,7 +1166,8 @@ const Users = () => {
                                             </div>
                                         </div>
                                     </Td>
-                                    <Td>{usuario.phone || '-'}</Td>
+                                    <Td>{obtenerDocumentoUsuario(usuario) || '-'}</Td>
+                                    <Td>{obtenerWhatsappUsuario(usuario) || '-'}</Td>
                                     <Td>
                                         <div className="flex flex-wrap gap-1 max-w-[220px]">
                                             {obtenerTagsTipo(usuario).map((tag) => (
@@ -1082,7 +1292,11 @@ const Users = () => {
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
                                     <p className="text-gray-500">Identificación</p>
-                                    <p className="mt-1">{detalleUsuario.phone || '-'}</p>
+                                    <p className="mt-1">{obtenerDocumentoUsuario(detalleUsuario) || '-'}</p>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 p-3">
+                                    <p className="text-gray-500">Número WhatsApp</p>
+                                    <p className="mt-1">{obtenerWhatsappUsuario(detalleUsuario) || '-'}</p>
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
                                     <p className="text-gray-500">Es empresa</p>
@@ -1261,15 +1475,74 @@ const Users = () => {
                                             Identificación
                                         </label>
                                         <Input
-                                            value={formulario.phone}
+                                            value={formulario.document}
                                             onChange={(event) =>
                                                 actualizarCampoFormulario(
-                                                    'phone',
+                                                    'document',
                                                     event.target.value,
                                                 )
                                             }
                                             placeholder="Identificación"
                                         />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="text-sm text-gray-500">
+                                            Número WhatsApp
+                                        </label>
+                                        <div className="mt-1 grid grid-cols-1 md:grid-cols-12 gap-3">
+                                            <div className="md:col-span-5">
+                                                <Select<OpcionCodigoPais, false>
+                                                    value={
+                                                        opcionesPais.find(
+                                                            (item) =>
+                                                                item.phone_code ===
+                                                                formulario.phone_code,
+                                                        ) || opcionPaisColombia
+                                                    }
+                                                    options={opcionesPais}
+                                                    isSearchable
+                                                    menuPlacement="auto"
+                                                    menuPosition="fixed"
+                                                    menuPortalTarget={
+                                                        typeof window !== 'undefined'
+                                                            ? document.body
+                                                            : undefined
+                                                    }
+                                                    styles={{
+                                                        menuPortal: (base) => ({
+                                                            ...base,
+                                                            zIndex: 70,
+                                                        }),
+                                                    }}
+                                                    placeholder="País"
+                                                    noOptionsMessage={() =>
+                                                        'No hay países disponibles'
+                                                    }
+                                                    onChange={(option) =>
+                                                        actualizarCampoFormulario(
+                                                            'phone_code',
+                                                            option?.phone_code ||
+                                                                opcionPaisColombia?.phone_code ||
+                                                                '+57',
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="md:col-span-7">
+                                                <Input
+                                                    value={formulario.phone_number}
+                                                    onChange={(event) =>
+                                                        actualizarCampoFormulario(
+                                                            'phone_number',
+                                                            normalizarDigitosWhatsapp(
+                                                                event.target.value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    placeholder="Número de WhatsApp"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="text-sm text-gray-500">

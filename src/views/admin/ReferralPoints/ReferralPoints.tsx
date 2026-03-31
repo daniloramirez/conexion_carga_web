@@ -21,6 +21,7 @@ import {
     PiBuildingsDuotone,
     PiCaretDownBold,
     PiEnvelopeSimpleDuotone,
+    PiIdentificationCardDuotone,
     PiMagnifyingGlassDuotone,
     PiMedalDuotone,
     PiPhoneDuotone,
@@ -696,6 +697,15 @@ const ReferralPoints = () => {
                                                                                             {referido.email}
                                                                                         </span>
                                                                                     </span>
+
+                                                                                    {referido.document && (
+                                                                                        <span className="inline-flex items-center gap-1.5">
+                                                                                            <PiIdentificationCardDuotone className="shrink-0 text-sm text-primary" />
+                                                                                            <span>
+                                                                                                {referido.document}
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    )}
 
                                                                                     {referido.phone && (
                                                                                         <span className="inline-flex items-center gap-1.5">

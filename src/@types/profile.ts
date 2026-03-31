@@ -4,6 +4,7 @@ export type PerfilActual = {
     last_name: string
     full_name: string
     email: string
+    document?: string | null
     phone?: string | null
     is_company: boolean
     company_name?: string | null
@@ -16,7 +17,10 @@ export type PerfilActual = {
 export type ActualizarPerfilPayload = {
     first_name: string
     last_name: string
+    document?: string | null
     phone?: string | null
+    phone_code?: string | null
+    phone_number?: string | null
     company_name?: string | null
 }
 
