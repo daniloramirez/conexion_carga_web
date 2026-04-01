@@ -153,6 +153,64 @@ const obtenerWhatsappUsuario = (usuario: Pick<UsuarioAdmin, 'phone'>) => {
     return esTelefonoInternacional(phone) ? phone : ''
 }
 
+const obtenerPaisPorTelefono = (
+    telefono?: string | null,
+    opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
+) => {
+    const telefonoNormalizado = String(telefono || '').trim()
+
+    if (!esTelefonoInternacional(telefonoNormalizado)) {
+        return null
+    }
+
+    const opcionesOrdenadas = [...opcionesPais].sort(
+        (a, b) => b.phone_code.length - a.phone_code.length,
+    )
+
+    return (
+        opcionesOrdenadas.find((item) =>
+            telefonoNormalizado.startsWith(item.phone_code),
+        ) || null
+    )
+}
+
+const renderizarWhatsappConBandera = (
+    telefono?: string | null,
+    opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
+) => {
+    const whatsapp = String(telefono || '').trim()
+
+    if (!whatsapp) {
+        return '-'
+    }
+
+    const pais = obtenerPaisPorTelefono(whatsapp, opcionesPais)
+
+    return pais ? `${pais.flag_emoji} ${whatsapp}` : whatsapp
+}
+
+const formatearOpcionPais = (
+    opcion: OpcionCodigoPais,
+    contexto: 'menu' | 'value',
+) => {
+    if (contexto === 'value') {
+        return (
+            <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base leading-none">{opcion.flag_emoji}</span>
+                <span className="font-medium truncate">{opcion.phone_code}</span>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base leading-none">{opcion.flag_emoji}</span>
+            <span className="font-medium">{opcion.phone_code}</span>
+            <span className="truncate text-gray-500">{opcion.name}</span>
+        </div>
+    )
+}
+
 const descomponerTelefonoInternacional = (
     telefono?: string | null,
     opcionesPais: OpcionCodigoPais[] = opcionesPaisFallback,
@@ -1167,7 +1225,14 @@ const Users = () => {
                                         </div>
                                     </Td>
                                     <Td>{obtenerDocumentoUsuario(usuario) || '-'}</Td>
-                                    <Td>{obtenerWhatsappUsuario(usuario) || '-'}</Td>
+                                    <Td>
+                                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                            {renderizarWhatsappConBandera(
+                                                obtenerWhatsappUsuario(usuario),
+                                                opcionesPais,
+                                            )}
+                                        </span>
+                                    </Td>
                                     <Td>
                                         <div className="flex flex-wrap gap-1 max-w-[220px]">
                                             {obtenerTagsTipo(usuario).map((tag) => (
@@ -1296,7 +1361,12 @@ const Users = () => {
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
                                     <p className="text-gray-500">Número WhatsApp</p>
-                                    <p className="mt-1">{obtenerWhatsappUsuario(detalleUsuario) || '-'}</p>
+                                    <p className="mt-1">
+                                        {renderizarWhatsappConBandera(
+                                            obtenerWhatsappUsuario(detalleUsuario),
+                                            opcionesPais,
+                                        )}
+                                    </p>
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
                                     <p className="text-gray-500">Es empresa</p>
@@ -1485,12 +1555,12 @@ const Users = () => {
                                             placeholder="Identificación"
                                         />
                                     </div>
-                                    <div className="md:col-span-2">
+                                    <div>
                                         <label className="text-sm text-gray-500">
                                             Número WhatsApp
                                         </label>
-                                        <div className="mt-1 grid grid-cols-1 md:grid-cols-12 gap-3">
-                                            <div className="md:col-span-5">
+                                        <div className="mt-1 flex items-stretch gap-2 max-w-full">
+                                            <div className="w-[150px] shrink-0">
                                                 <Select<OpcionCodigoPais, false>
                                                     value={
                                                         opcionesPais.find(
@@ -1518,6 +1588,17 @@ const Users = () => {
                                                     noOptionsMessage={() =>
                                                         'No hay países disponibles'
                                                     }
+                                                    formatOptionLabel={(
+                                                        option,
+                                                        { context },
+                                                    ) =>
+                                                        formatearOpcionPais(
+                                                            option,
+                                                            context === 'menu'
+                                                                ? 'menu'
+                                                                : 'value',
+                                                        )
+                                                    }
                                                     onChange={(option) =>
                                                         actualizarCampoFormulario(
                                                             'phone_code',
@@ -1528,7 +1609,7 @@ const Users = () => {
                                                     }
                                                 />
                                             </div>
-                                            <div className="md:col-span-7">
+                                            <div className="min-w-0 flex-1">
                                                 <Input
                                                     value={formulario.phone_number}
                                                     onChange={(event) =>
