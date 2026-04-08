@@ -609,14 +609,6 @@ const CamposFormularioViaje = ({
                 />
             </div>
             <div>
-                <label className="text-sm text-gray-500">Conductor</label>
-                <Input
-                    value={formulario.conductor}
-                    onChange={(event) => onChange('conductor', event.target.value)}
-                    placeholder="Nombre del conductor"
-                />
-            </div>
-            <div>
                 <label className="text-sm text-gray-500">Tipo de vehículo</label>
                 {modo === 'crear' ? (
                     <Select<OpcionSelectTexto, false>
@@ -1872,12 +1864,6 @@ const Trips = () => {
                                         <p className="text-gray-500">Valor</p>
                                         <p className="mt-1">
                                             {formatearMoneda(detalleViaje.valor)}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-xl border border-gray-200 p-3">
-                                        <p className="text-gray-500">Conductor</p>
-                                        <p className="mt-1">
-                                            {detalleViaje.conductor || '-'}
                                         </p>
                                     </div>
                                     <div className="rounded-xl border border-gray-200 p-3">
